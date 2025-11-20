@@ -1,122 +1,192 @@
-import React, { useState, useEffect } from 'react';
-import { fetchMarketTrends, generateTrendImage } from '../services/geminiService';
-import { Loader2, TrendingUp, ExternalLink, Sparkles, Tag } from 'lucide-react';
-import { TrendItem } from '../types';
 
-const MarketInsights: React.FC = () => {
+import React, { useState, useEffect } from 'react';
+import { fetchMarketTrends, getTrendImage, FALLBACK_TRENDS } from '../services/geminiService';
+import { Loader2, TrendingUp, ExternalLink, Sparkles, Tag, Camera, Lock } from 'lucide-react';
+import { TrendItem, SavedItem } from '../types';
+
+interface MarketInsightsProps {
+  onSave: (item: Omit<SavedItem, 'id' | 'date'>) => void;
+  isPro: boolean;
+  onTriggerSubscribe: () => void;
+}
+
+const MarketInsights: React.FC<MarketInsightsProps> = ({ onSave, isPro, onTriggerSubscribe }) => {
   const [trends, setTrends] = useState<TrendItem[]>([]);
   const [images, setImages] = useState<{[key: string]: string}>({});
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [sources, setSources] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [usingLive, setUsingLive] = useState<boolean>(false);
 
-  const loadData = async () => {
-    setLoading(true);
-    setTrends([]);
-    setImages({});
-    
-    const data = await fetchMarketTrends();
-    
-    if (data.trends && data.trends.length > 0) {
-      setTrends(data.trends);
-      setSources(data.chunks);
-      
-      // Trigger image generation for each trend individually
-      data.trends.forEach(async (trend: TrendItem) => {
-        const img = await generateTrendImage(`${trend.title} - ${trend.description}`);
-        if (img) {
-          setImages(prev => ({...prev, [trend.title]: img}));
-        }
-      });
-    } else {
-      // Fallback if parsing fails
-      setTrends([{ title: "General Market Data", description: data.text, priceRange: "N/A" }]);
-    }
-    
-    setLoading(false);
-  };
-
+  // Initial load logic
   useEffect(() => {
+    const loadData = async () => {
+      // Check if we have cached live data first (implicit via service)
+      const data = await fetchMarketTrends(false);
+      
+      if (data.trends && data.trends.length > 0) {
+        setTrends(data.trends);
+        setSources(data.chunks || []);
+        
+        // Auto-load visuals using the smart mapper (No API cost)
+        const newImages: {[key: string]: string} = {};
+        for (const trend of data.trends) {
+           const img = await getTrendImage(trend.title + " " + trend.description);
+           newImages[trend.title] = img;
+        }
+        setImages(newImages);
+        
+        // If the returned data matches fallback exactly, we aren't "live"
+        const isFallback = JSON.stringify(data.trends) === JSON.stringify(FALLBACK_TRENDS);
+        setUsingLive(!isFallback);
+      }
+    };
     loadData();
   }, []);
 
+  const handleScanMarket = async () => {
+    if (!isPro) {
+        onTriggerSubscribe();
+        return;
+    }
+
+    setLoading(true);
+    setUsingLive(true);
+    
+    // Force refresh true to hit API
+    const data = await fetchMarketTrends(true);
+    
+    if (data.trends && data.trends.length > 0) {
+      setTrends(data.trends);
+      setSources(data.chunks || []);
+      
+      // Instantly map images without hitting API limits
+      const newImages: {[key: string]: string} = {};
+      for (const trend of data.trends) {
+          const img = await getTrendImage(trend.title + " " + trend.description);
+          newImages[trend.title] = img;
+      }
+      setImages(newImages);
+    }
+    setLoading(false);
+  };
+
+  const handleCapture = (trend: TrendItem) => {
+    onSave({
+      type: 'TREND',
+      title: trend.title,
+      content: trend.description,
+      image: images[trend.title],
+      tags: trend.priceRange ? [trend.priceRange] : []
+    });
+  };
+
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-stone-900 flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
             <TrendingUp className="h-6 w-6 text-amber-600" />
-            2025 Trend Forecast
+            Market Intelligence
           </h2>
-          <p className="text-stone-500 text-sm mt-1">Real-time market analysis powered by Google Search & AI Vision.</p>
+          <p className="text-stone-500 dark:text-stone-400 text-sm mt-1">
+            {usingLive ? "Showing AI market analysis (Live Data)." : "Showing evergreen market staples."}
+          </p>
         </div>
         <button 
-          onClick={loadData} 
+          onClick={handleScanMarket} 
           disabled={loading}
-          className="px-5 py-2.5 text-sm font-medium bg-stone-900 text-white rounded-full hover:bg-stone-800 transition-all shadow-md disabled:opacity-50 flex items-center gap-2"
+          className={`px-5 py-2.5 text-sm font-medium rounded-full transition-all shadow-md disabled:opacity-50 flex items-center gap-2 whitespace-nowrap ${
+            isPro 
+              ? 'bg-stone-900 dark:bg-white text-white dark:text-stone-900 hover:bg-stone-800 dark:hover:bg-stone-200'
+              : 'bg-amber-600 text-white hover:bg-amber-700'
+          }`}
         >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          {loading ? 'Scanning Market...' : 'Refresh Trends'}
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : isPro ? (
+            <Sparkles className="h-4 w-4" />
+          ) : (
+            <Lock className="h-4 w-4" />
+          )}
+          {loading ? 'Scanning Trends...' : 'Refresh Market Data'}
         </button>
       </div>
 
-      {loading && trends.length === 0 ? (
+      {loading ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-white rounded-2xl h-96 border border-stone-100 shadow-sm p-4 space-y-4">
-              <div className="bg-stone-200 h-48 rounded-xl w-full"></div>
-              <div className="h-6 bg-stone-200 rounded w-3/4"></div>
-              <div className="h-4 bg-stone-200 rounded w-full"></div>
-              <div className="h-4 bg-stone-200 rounded w-1/2"></div>
+            <div key={i} className="bg-white dark:bg-stone-900 rounded-2xl h-96 border border-stone-100 dark:border-stone-800 shadow-sm p-4 space-y-4">
+              <div className="bg-stone-200 dark:bg-stone-800 h-48 rounded-xl w-full"></div>
+              <div className="h-6 bg-stone-200 dark:bg-stone-800 rounded w-3/4"></div>
+              <div className="h-4 bg-stone-200 dark:bg-stone-800 rounded w-full"></div>
+              <div className="h-4 bg-stone-200 dark:bg-stone-800 rounded w-1/2"></div>
             </div>
           ))}
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {trends.map((trend, idx) => (
-            <div key={idx} className="bg-white rounded-2xl shadow-sm border border-stone-100 hover:shadow-xl transition-all duration-300 overflow-hidden group flex flex-col">
-              <div className="relative h-56 bg-stone-100 overflow-hidden">
-                {images[trend.title] ? (
-                  <img 
-                    src={images[trend.title]} 
-                    alt={trend.title} 
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-stone-400 bg-stone-50">
-                    <Loader2 className="h-8 w-8 animate-spin" />
+          {trends.map((trend, idx) => {
+            const hasImage = !!images[trend.title];
+            
+            return (
+              <div key={idx} className="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 hover:shadow-xl transition-all duration-300 overflow-hidden group flex flex-col relative">
+                <div className="relative h-56 bg-stone-100 dark:bg-stone-800 overflow-hidden group/image">
+                  {hasImage ? (
+                    <img 
+                      src={images[trend.title]} 
+                      alt={trend.title} 
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-stone-200 to-stone-300 dark:from-stone-800 dark:to-stone-900 flex items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-stone-400" />
+                    </div>
+                  )}
+
+                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-amber-800 shadow-sm z-10">
+                    #{idx + 1} Trending
                   </div>
-                )}
-                <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-amber-800 shadow-sm">
-                  #{idx + 1} Trending
-                </div>
-              </div>
-              
-              <div className="p-5 flex flex-col flex-grow">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-serif text-lg font-bold text-stone-900 leading-tight group-hover:text-amber-700 transition-colors">
-                    {trend.title}
-                  </h3>
+                  
+                  {/* Capture Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCapture(trend);
+                    }}
+                    className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-white text-stone-700 rounded-full shadow-sm transition-all opacity-0 group-hover:opacity-100 hover:scale-110 z-10"
+                    title="Capture to Gallery"
+                  >
+                    <Camera className="h-4 w-4" />
+                  </button>
                 </div>
                 
-                <p className="text-sm text-stone-600 mb-4 line-clamp-3 flex-grow">
-                  {trend.description}
-                </p>
-                
-                <div className="pt-4 border-t border-stone-100 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-md">
-                    <Tag className="h-3 w-3" />
-                    {trend.priceRange || "Price Varies"}
+                <div className="p-5 flex flex-col flex-grow">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-serif text-lg font-bold text-stone-900 dark:text-stone-100 leading-tight group-hover:text-amber-700 dark:group-hover:text-amber-500 transition-colors">
+                      {trend.title}
+                    </h3>
+                  </div>
+                  
+                  <p className="text-sm text-stone-600 dark:text-stone-400 mb-4 line-clamp-3 flex-grow">
+                    {trend.description}
+                  </p>
+                  
+                  <div className="pt-4 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2.5 py-1 rounded-md">
+                      <Tag className="h-3 w-3" />
+                      {trend.priceRange || "Price Varies"}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {sources.length > 0 && (
-        <div className="mt-8 pt-6 border-t border-stone-200">
+        <div className="mt-8 pt-6 border-t border-stone-200 dark:border-stone-800">
           <h3 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-4">Data Sources</h3>
           <div className="flex flex-wrap gap-2">
             {sources.map((chunk, idx) => {
@@ -127,7 +197,7 @@ const MarketInsights: React.FC = () => {
                     href={chunk.web.uri} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-full shadow-sm hover:shadow border border-stone-200 text-xs text-stone-600 transition-all"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-stone-900 rounded-full shadow-sm hover:shadow border border-stone-200 dark:border-stone-700 text-xs text-stone-600 dark:text-stone-400 transition-all"
                   >
                     <ExternalLink className="h-3 w-3 text-amber-500" />
                     {chunk.web.title || "Source"}

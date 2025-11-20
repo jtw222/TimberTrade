@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ShoppingCart, Heart, Search, Menu, Instagram, Facebook, Mail } from 'lucide-react';
 
@@ -34,32 +35,32 @@ const products = [
 
 const StorePreview: React.FC = () => {
   return (
-    <div className="bg-white rounded-xl border border-stone-200 shadow-lg overflow-hidden flex flex-col min-h-[800px]">
+    <div className="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 shadow-lg overflow-hidden flex flex-col min-h-[800px]">
       {/* Browser Mockup Header */}
-      <div className="bg-stone-100 border-b border-stone-200 px-4 py-2 flex items-center gap-2">
+      <div className="bg-stone-100 dark:bg-stone-800 border-b border-stone-200 dark:border-stone-700 px-4 py-2 flex items-center gap-2">
         <div className="flex gap-1.5">
           <div className="w-3 h-3 rounded-full bg-red-400"></div>
           <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
           <div className="w-3 h-3 rounded-full bg-green-400"></div>
         </div>
-        <div className="flex-1 bg-white h-6 rounded text-center text-xs text-stone-400 flex items-center justify-center">
+        <div className="flex-1 bg-white dark:bg-stone-900 h-6 rounded text-center text-xs text-stone-400 dark:text-stone-500 flex items-center justify-center">
           your-shop-name.com
         </div>
       </div>
 
       {/* Store Navigation */}
-      <nav className="px-8 py-6 border-b border-stone-100 flex justify-between items-center">
+      <nav className="px-8 py-6 border-b border-stone-100 dark:border-stone-800 flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <Menu className="h-6 w-6 text-stone-800 md:hidden" />
-          <h1 className="text-2xl font-serif font-bold text-stone-800 tracking-tight">TIMBER & GRAIN</h1>
+          <Menu className="h-6 w-6 text-stone-800 dark:text-white md:hidden" />
+          <h1 className="text-2xl font-serif font-bold text-stone-800 dark:text-white tracking-tight">TIMBER & GRAIN</h1>
         </div>
-        <div className="hidden md:flex gap-8 text-sm font-medium text-stone-600">
-          <span className="hover:text-stone-900 cursor-pointer">Shop All</span>
-          <span className="hover:text-stone-900 cursor-pointer">Frames</span>
-          <span className="hover:text-stone-900 cursor-pointer">Furniture</span>
-          <span className="hover:text-stone-900 cursor-pointer">About</span>
+        <div className="hidden md:flex gap-8 text-sm font-medium text-stone-600 dark:text-stone-400">
+          <span className="hover:text-stone-900 dark:hover:text-white cursor-pointer">Shop All</span>
+          <span className="hover:text-stone-900 dark:hover:text-white cursor-pointer">Frames</span>
+          <span className="hover:text-stone-900 dark:hover:text-white cursor-pointer">Furniture</span>
+          <span className="hover:text-stone-900 dark:hover:text-white cursor-pointer">About</span>
         </div>
-        <div className="flex gap-4 text-stone-800">
+        <div className="flex gap-4 text-stone-800 dark:text-white">
           <Search className="h-5 w-5 cursor-pointer" />
           <ShoppingCart className="h-5 w-5 cursor-pointer" />
         </div>
@@ -82,13 +83,13 @@ const StorePreview: React.FC = () => {
       </div>
 
       {/* Featured Products */}
-      <div className="p-8 md:p-12 bg-stone-50 flex-1">
+      <div className="p-8 md:p-12 bg-stone-50 dark:bg-stone-950 flex-1">
         <div className="flex justify-between items-end mb-8">
           <div>
-            <h3 className="text-xl font-bold text-stone-800">New Arrivals</h3>
-            <p className="text-stone-500 text-sm">Fresh from the workshop bench.</p>
+            <h3 className="text-xl font-bold text-stone-800 dark:text-white">New Arrivals</h3>
+            <p className="text-stone-500 dark:text-stone-400 text-sm">Fresh from the workshop bench.</p>
           </div>
-          <a href="#" className="text-sm text-amber-700 underline">View all</a>
+          <a href="#" className="text-sm text-amber-700 dark:text-amber-500 underline">View all</a>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -107,16 +108,16 @@ const StorePreview: React.FC = () => {
                   Add to Cart
                 </button>
               </div>
-              <h4 className="font-medium text-stone-900">{product.name}</h4>
-              <p className="text-sm text-stone-500">{product.category}</p>
-              <p className="text-stone-800 mt-1 font-semibold">${product.price.toFixed(2)}</p>
+              <h4 className="font-medium text-stone-900 dark:text-white">{product.name}</h4>
+              <p className="text-sm text-stone-500 dark:text-stone-400">{product.category}</p>
+              <p className="text-stone-800 dark:text-stone-200 mt-1 font-semibold">${product.price.toFixed(2)}</p>
             </div>
           ))}
         </div>
       </div>
 
       {/* Footer Mockup */}
-      <div className="bg-stone-900 text-stone-400 py-12 px-8">
+      <div className="bg-stone-900 dark:bg-black text-stone-400 py-12 px-8">
         <div className="grid md:grid-cols-3 gap-8 mb-8">
           <div>
             <h5 className="text-white font-bold mb-4">TIMBER & GRAIN</h5>
