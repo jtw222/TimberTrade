@@ -1,14 +1,25 @@
 
 import React, { useState, useEffect } from 'react';
 import { fetchMarketTrends, getTrendImage, FALLBACK_TRENDS } from '../services/geminiService';
-import { Loader2, TrendingUp, ExternalLink, Sparkles, Tag, Camera, Lock } from 'lucide-react';
+import { Loader2, TrendingUp, ExternalLink, Sparkles, Tag, Camera, Lock, BarChart3 } from 'lucide-react';
 import { TrendItem, SavedItem } from '../types';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface MarketInsightsProps {
   onSave: (item: Omit<SavedItem, 'id' | 'date'>) => void;
   isPro: boolean;
   onTriggerSubscribe: () => void;
 }
+
+const MARKET_DATA = [
+  { year: '2021', value: 718, label: 'Historical' },
+  { year: '2022', value: 752, label: 'Historical' },
+  { year: '2023', value: 790, label: 'Historical' },
+  { year: '2024', value: 835, label: 'Current' },
+  { year: '2025', value: 890, label: 'Forecast' },
+  { year: '2026', value: 955, label: 'Forecast' },
+  { year: '2027', value: 1025, label: 'Forecast' },
+];
 
 const MarketInsights: React.FC<MarketInsightsProps> = ({ onSave, isPro, onTriggerSubscribe }) => {
   const [trends, setTrends] = useState<TrendItem[]>([]);
@@ -111,6 +122,70 @@ const MarketInsights: React.FC<MarketInsightsProps> = ({ onSave, isPro, onTrigge
           )}
           {loading ? 'Scanning Trends...' : 'Refresh Market Data'}
         </button>
+      </div>
+
+      {/* MARKET GROWTH CHART */}
+      <div className="bg-white dark:bg-stone-900 p-6 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <div>
+            <h3 className="text-lg font-bold text-stone-900 dark:text-white flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-stone-500" />
+              Global Artisan Market Size
+            </h3>
+            <p className="text-sm text-stone-500 dark:text-stone-400">
+              Historical growth and future valuation (Billions USD).
+            </p>
+          </div>
+          <div className="flex gap-3 text-xs font-medium">
+             <div className="flex items-center gap-1.5">
+               <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+               <span className="text-stone-600 dark:text-stone-300">Historical</span>
+             </div>
+             <div className="flex items-center gap-1.5">
+               <span className="w-2 h-2 rounded-full bg-amber-300/50 border border-amber-500 border-dashed"></span>
+               <span className="text-stone-600 dark:text-stone-300">Projected</span>
+             </div>
+          </div>
+        </div>
+        
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={MARKET_DATA} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#d97706" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#d97706" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e5e5" className="dark:stroke-stone-800" />
+              <XAxis 
+                dataKey="year" 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{fill: '#78716c', fontSize: 12}} 
+                dy={10}
+              />
+              <YAxis 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{fill: '#78716c', fontSize: 12}} 
+                tickFormatter={(value) => `$${value}B`}
+              />
+              <Tooltip 
+                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                formatter={(value: number) => [`$${value} Billion`, 'Market Size']}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="value" 
+                stroke="#d97706" 
+                strokeWidth={3}
+                fillOpacity={1} 
+                fill="url(#colorValue)" 
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {loading ? (
